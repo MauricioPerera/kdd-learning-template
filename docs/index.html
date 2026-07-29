@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KDD-Learning</title>
+<meta name="description" content="Una forma de anotar, antes de practicar, qué va a significar 'ya lo aprendí' — y después comprobarlo con honestidad.">
+<style>
+@layer base, layout, components, motion;
+
+@layer base {
+  :root{
+    color-scheme: light dark;
+
+    /* Paleta en oklch: la claridad es perceptualmente uniforme, asi el modo
+       claro y el oscuro guardan el mismo contraste relativo sin ajustar a ojo. */
+    --hue: 68;
+    --bg:        oklch(98.6% 0.008 var(--hue));
+    --bg-deep:   oklch(96.2% 0.014 var(--hue));
+    --fg:        oklch(21% 0.02 var(--hue));
+    --muted:     oklch(48% 0.02 var(--hue));
+    --line:      oklch(89% 0.012 var(--hue));
+    --card:      oklch(100% 0 0);
+    --accent:    oklch(52% 0.13 var(--hue));
+    --accent-2:  oklch(56% 0.14 28);
+    --accent-soft: color-mix(in oklch, var(--accent) 12%, var(--bg));
+    --warn:      oklch(50% 0.12 42);
+    --ring: color-mix(in oklch, var(--accent) 40%, transparent);
+    --shadow-sm: 0 1px 2px oklch(20% 0.02 var(--hue) / .05),
+                 0 2px 8px oklch(20% 0.02 var(--hue) / .05);
+    --shadow-md: 0 2px 4px oklch(20% 0.02 var(--hue) / .06),
+                 0 12px 32px oklch(20% 0.02 var(--hue) / .09);
+    --max: 46rem;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:        oklch(17% 0.016 290);
+      --bg-deep:   oklch(14% 0.018 290);
+      --fg:        oklch(94% 0.012 290);
+      --muted:     oklch(72% 0.02 290);
+      --line:      oklch(30% 0.018 290);
+      --card:      oklch(21% 0.018 290);
+      --accent:    oklch(82% 0.13 var(--hue));
+      --accent-2:  oklch(78% 0.12 28);
+      --accent-soft: color-mix(in oklch, var(--accent) 16%, var(--bg));
+      --warn:      oklch(80% 0.11 42);
+      --shadow-sm: 0 1px 2px oklch(0% 0 0 / .3);
+      --shadow-md: 0 2px 6px oklch(0% 0 0 / .35), 0 16px 40px oklch(0% 0 0 / .35);
+    }
+  }
+
+  *, *::before, *::after{ box-sizing:border-box }
+
+  body{
+    margin:0;
+    background:
+      radial-gradient(60rem 34rem at 50% -12rem,
+        color-mix(in oklch, var(--accent) 13%, transparent), transparent 65%),
+      linear-gradient(var(--bg-deep), var(--bg) 22rem);
+    background-attachment: fixed;
+    color:var(--fg);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    font-size: clamp(1rem, 0.96rem + 0.2vw, 1.075rem);
+    line-height:1.68;
+    -webkit-text-size-adjust:100%;
+    text-rendering:optimizeLegibility;
+  }
+
+  h1, h2, h3{ text-wrap:balance; letter-spacing:-0.022em; line-height:1.15 }
+  h1{
+    font-size: clamp(2rem, 1.35rem + 3.1vw, 3.35rem);
+    margin:0 0 1.1rem;
+    background: linear-gradient(155deg, var(--fg) 30%,
+                color-mix(in oklch, var(--accent) 72%, var(--fg)));
+    -webkit-background-clip:text; background-clip:text; color:transparent;
+  }
+  h2{
+    font-size: clamp(1.3rem, 1.1rem + 0.9vw, 1.75rem);
+    margin: clamp(3rem, 6vw, 4.5rem) 0 .85rem;
+  }
+  h2::before{
+    content:""; display:block; width:2.25rem; height:3px; border-radius:2px;
+    margin-bottom:.9rem;
+    background:linear-gradient(90deg, var(--accent), var(--accent-2));
+  }
+  p{ margin:0 0 1.1rem; text-wrap:pretty }
+  ul{ padding-left:1.15rem; margin:0 0 1.1rem }
+  li{ margin-bottom:.5rem }
+  a{
+    color:var(--accent); text-underline-offset:3px;
+    text-decoration-thickness:1px;
+    transition: color .18s ease;
+  }
+  a:hover{ color:var(--accent-2) }
+  a:focus-visible{ outline:2px solid var(--ring); outline-offset:3px; border-radius:4px }
+  code{
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size:.87em;
+    background:var(--accent-soft);
+    padding:.12em .38em; border-radius:5px;
+  }
+}
+
+@layer layout {
+  .wrap{ max-width:var(--max); margin-inline:auto; padding-inline:clamp(1.1rem, 4vw, 1.5rem) }
+
+  header{
+    position:sticky; top:0; z-index:10;
+    padding-block:.85rem;
+    background: color-mix(in oklch, var(--bg) 78%, transparent);
+    border-bottom:1px solid transparent;
+    transition: border-color .2s ease, background .2s ease;
+  }
+  @supports (backdrop-filter: blur(1px)){
+    header{ backdrop-filter: blur(14px) saturate(1.7) }
+  }
+  header.scrolled{
+    border-bottom-color:var(--line);
+    background: color-mix(in oklch, var(--bg) 88%, transparent);
+  }
+  .bar{
+    max-width:var(--max); margin-inline:auto;
+    padding-inline:clamp(1.1rem, 4vw, 1.5rem);
+    display:flex; gap:1rem; align-items:center; justify-content:space-between;
+    flex-wrap:wrap;
+  }
+  .brand{
+    font-weight:660; letter-spacing:-.02em;
+    display:inline-flex; align-items:center; gap:.5rem;
+  }
+  .brand::before{
+    content:""; width:.62rem; height:.62rem; border-radius:3px;
+    background:linear-gradient(140deg, var(--accent), var(--accent-2));
+    box-shadow:0 0 0 3px color-mix(in oklch, var(--accent) 18%, transparent);
+  }
+  main{ padding-bottom:2rem }
+  footer{
+    margin-block: clamp(3.5rem, 8vw, 5rem) 3rem;
+    padding-top:1.6rem; border-top:1px solid var(--line);
+    color:var(--muted); font-size:.9rem;
+  }
+}
+
+@layer components {
+  .lede{
+    font-size: clamp(1.1rem, 1rem + 0.6vw, 1.3rem);
+    color:var(--muted); text-wrap:pretty;
+    margin-bottom:1.5rem;
+  }
+  .muted{ color:var(--muted) }
+
+  /* Conmutador de idioma como control segmentado, con una pastilla que se
+     desliza detras del boton activo. */
+  .langs{
+    display:flex; gap:.15rem; position:relative;
+    padding:.22rem; border-radius:99px;
+    background: color-mix(in oklch, var(--fg) 6%, transparent);
+    border:1px solid var(--line);
+  }
+  .langs button{
+    font:inherit; font-size:.8rem; font-weight:520;
+    padding:.34rem .72rem; cursor:pointer; position:relative; z-index:1;
+    background:none; border:0; border-radius:99px;
+    color:var(--muted);
+    transition: color .2s ease;
+  }
+  .langs button:hover{ color:var(--fg) }
+  .langs button[aria-pressed="true"]{ color:var(--fg); font-weight:640 }
+  .langs button:focus-visible{ outline:2px solid var(--ring); outline-offset:2px }
+  .langs::after{
+    content:""; position:absolute; z-index:0; inset-block:.22rem; left:0;
+    border-radius:99px;
+    background:linear-gradient(140deg,
+      color-mix(in oklch, var(--accent) 30%, var(--card)),
+      color-mix(in oklch, var(--accent-2) 24%, var(--card)));
+    box-shadow:var(--shadow-sm);
+    width:var(--pill-w, 5rem);
+    translate:var(--pill-x, .22rem) 0;
+    transition: translate .34s cubic-bezier(.4,.95,.3,1),
+                width .34s cubic-bezier(.4,.95,.3,1);
+  }
+
+  figure{
+    margin-block: clamp(1.75rem, 4vw, 2.5rem); margin-inline:0;
+    padding:clamp(1rem, 3vw, 1.5rem);
+    background:var(--card);
+    border:1px solid var(--line); border-radius:16px;
+    box-shadow:var(--shadow-sm);
+    overflow-x:auto;
+  }
+  /* min-width fijo, no min(): en pantallas angostas el diagrama NO debe
+     encogerse hasta volverse ilegible (a 375px el texto quedaba en 5px).
+     Scrollea dentro de su propia figura, que tiene overflow-x. */
+  figure svg{ display:block; width:100%; height:auto; min-width:34rem }
+  figcaption{
+    margin-top:1rem; font-size:.87rem; color:var(--muted);
+    text-align:center; text-wrap:pretty;
+  }
+
+  .card{
+    background:var(--card);
+    border:1px solid var(--line); border-radius:14px;
+    padding:1.2rem 1.35rem; margin-block:1.6rem;
+    box-shadow:var(--shadow-sm);
+  }
+  .card.flag{
+    border-left:3px solid var(--warn);
+    background:linear-gradient(100deg,
+      color-mix(in oklch, var(--warn) 7%, var(--card)), var(--card) 55%);
+  }
+
+  pre{
+    background:linear-gradient(var(--bg-deep), var(--card));
+    border:1px solid var(--line); border-radius:14px;
+    padding:1.1rem 1.2rem; overflow-x:auto;
+    font-size:.86rem; line-height:1.6;
+    box-shadow:var(--shadow-sm);
+  }
+  pre code{ background:none; padding:0; color:var(--fg) }
+
+  .steps{
+    counter-reset:s; list-style:none; padding:0;
+    display:grid; gap:.1rem;
+  }
+  .steps li{
+    counter-increment:s; position:relative;
+    padding:.62rem 0 .62rem 3rem;
+    border-bottom:1px solid color-mix(in oklch, var(--line) 60%, transparent);
+  }
+  .steps li:last-of-type{ border-bottom:0 }
+  .steps li::before{
+    content:counter(s);
+    position:absolute; left:0; top:.5rem;
+    width:1.85rem; height:1.85rem; border-radius:10px;
+    display:grid; place-items:center;
+    font-size:.8rem; font-weight:660; font-variant-numeric:tabular-nums;
+    color:var(--accent);
+    background:var(--accent-soft);
+    border:1px solid color-mix(in oklch, var(--accent) 26%, transparent);
+  }
+
+  [data-l]{ display:none }
+  html[lang="es"] [data-l~="es"],
+  html[lang="en"] [data-l~="en"],
+  html[lang="pt"] [data-l~="pt"]{ display:revert }
+}
+
+@layer motion {
+  /* Revelado al entrar en vista. La base es VISIBLE: si el navegador no
+     soporta animation-timeline no se anima nada, y nada queda escondido. */
+  @supports (animation-timeline: view()){
+    @media (prefers-reduced-motion: no-preference){
+      @keyframes reveal{
+        from{ opacity:0; translate:0 1.25rem }
+        to  { opacity:1; translate:0 0 }
+      }
+      main > h2, main > figure, main > .card, main > pre, main > .steps{
+        animation: reveal linear both;
+        animation-timeline: view();
+        animation-range: entry 0% entry 62%;
+      }
+    }
+  }
+  ::view-transition-old(root), ::view-transition-new(root){ animation-duration:.3s }
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration:.01ms !important; transition-duration:.01ms !important }
+  }
+}
+
+/* Fuera de las capas, para que gane siempre: al imprimir no hay scroll que
+   dispare el revelado, asi que sin esto la hoja saldria en blanco. */
+@media print{
+  *{ animation:none !important; opacity:1 !important; translate:none !important }
+  body{ background:none }
+  header{ position:static }
+  .langs{ display:none }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <span class="brand">KDD-Learning</span>
+    <div class="langs" role="group" aria-label="Idioma / Language / Idioma">
+      <button data-set="es" aria-pressed="true">Español</button>
+      <button data-set="en" aria-pressed="false">English</button>
+      <button data-set="pt" aria-pressed="false">Português</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <h1 data-l="es">¿Lo aprendiste, o solo te acostumbraste a practicar?</h1>
+  <h1 data-l="en">Did you learn it, or did you just get used to practising?</h1>
+  <h1 data-l="pt">Você aprendeu, ou só se acostumou a praticar?</h1>
+
+  <p class="lede" data-l="es">KDD-Learning es una forma de anotar, <strong>antes</strong> de empezar, qué va a significar exactamente “ya lo sé hacer”. Después te ayuda a comprobarlo sin engañarte.</p>
+  <p class="lede" data-l="en">KDD-Learning is a way to write down, <strong>before</strong> you start, what “I can do this now” will actually mean. Then it helps you check it without fooling yourself.</p>
+  <p class="lede" data-l="pt">KDD-Learning é uma forma de anotar, <strong>antes</strong> de começar, o que exatamente vai significar “já sei fazer”. Depois ajuda você a comprovar isso sem se enganar.</p>
+
+  <h2 data-l="es">El problema</h2>
+  <h2 data-l="en">The problem</h2>
+  <h2 data-l="pt">O problema</h2>
+
+  <p data-l="es">Practicar mucho se siente como progresar. Pero la sensación de haber mejorado y haber mejorado de verdad son dos cosas distintas, y sin un criterio fijado de antemano es casi imposible distinguirlas. Lo que suele pasar es más incómodo todavía: cuando el resultado no alcanza, uno ajusta el listón hacia abajo sin darse cuenta y se declara satisfecho.</p>
+  <p data-l="en">Lots of practice feels like progress. But feeling better and actually being better are two different things, and without a standard set in advance they're nearly impossible to tell apart. What usually happens is worse still: when the result falls short, you quietly lower the bar and declare yourself satisfied.</p>
+  <p data-l="pt">Praticar muito parece progresso. Mas a sensação de ter melhorado e ter melhorado de verdade são coisas diferentes, e sem um critério fixado de antemão é quase impossível distingui-las. O que costuma acontecer é ainda pior: quando o resultado não alcança, você baixa a régua sem perceber e se declara satisfeito.</p>
+
+  <p data-l="es">Este sistema no te dice si aprendiste. Hace algo más modesto y más útil: te ayuda a decidir el criterio antes, lo deja congelado para que cualquier cambio posterior quede a la vista, y te avisa cuando algo no cierra.</p>
+  <p data-l="en">This system doesn't tell you whether you learned. It does something humbler and more useful: it helps you decide the standard up front, keeps it frozen so any later change stays visible, and warns you when something doesn't add up.</p>
+  <p data-l="pt">Este sistema não diz se você aprendeu. Faz algo mais modesto e mais útil: ajuda você a decidir o critério antes, mantém-no congelado para que qualquer mudança posterior fique à vista, e avisa quando algo não fecha.</p>
+
+  <h2 data-l="es">Tres cuadernos separados</h2>
+  <h2 data-l="en">Three separate notebooks</h2>
+  <h2 data-l="pt">Três cadernos separados</h2>
+
+  <p data-l="es">Todo se apoya en no mezclar tres cosas que normalmente se mezclan: lo que sabés <em>sobre</em> la habilidad, lo que te comprometiste a lograr, y lo que realmente pasó.</p>
+  <p data-l="en">Everything rests on keeping apart three things people usually blur together: what you know <em>about</em> the skill, what you committed to achieve, and what actually happened.</p>
+  <p data-l="pt">Tudo se apoia em não misturar três coisas que normalmente se misturam: o que você sabe <em>sobre</em> a habilidade, o que se comprometeu a alcançar, e o que realmente aconteceu.</p>
+
+  <figure>
+    <svg viewBox="0 0 640 250" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Conocimiento, Contrato y Evidencia">
+      <g font-family="-apple-system,Segoe UI,Roboto,sans-serif">
+        <rect x="12" y="40" width="180" height="120" rx="10" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <text x="102" y="72" text-anchor="middle" font-size="15" font-weight="650" fill="var(--fg)">1</text>
+        <text x="102" y="98" text-anchor="middle" font-size="14" font-weight="650" fill="var(--fg)" data-l="es">Conocimiento</text>
+        <text x="102" y="98" text-anchor="middle" font-size="14" font-weight="650" fill="var(--fg)" data-l="en">Knowledge</text>
+        <text x="102" y="98" text-anchor="middle" font-size="14" font-weight="650" fill="var(--fg)" data-l="pt">Conhecimento</text>
+        <text x="102" y="122" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="es">qué es la habilidad</text>
+        <text x="102" y="122" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="en">what the skill is</text>
+        <text x="102" y="122" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="pt">o que é a habilidade</text>
+        <text x="102" y="140" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="es">y en qué partes se divide</text>
+        <text x="102" y="140" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="en">and its parts</text>
+        <text x="102" y="140" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="pt">e em que partes se divide</text>
+
+        <rect x="230" y="40" width="180" height="120" rx="10" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <text x="320" y="72" text-anchor="middle" font-size="15" font-weight="650" fill="var(--fg)">2</text>
+        <text x="320" y="98" text-anchor="middle" font-size="14" font-weight="650" fill="var(--fg)" data-l="es">Contrato</text>
+        <text x="320" y="98" text-anchor="middle" font-size="14" font-weight="650" fill="var(--fg)" data-l="en">Contract</text>
+        <text x="320" y="98" text-anchor="middle" font-size="14" font-weight="650" fill="var(--fg)" data-l="pt">Contrato</text>
+        <text x="320" y="122" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="es">qué vas a lograr</text>
+        <text x="320" y="122" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="en">what you'll achieve</text>
+        <text x="320" y="122" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="pt">o que você vai alcançar</text>
+        <text x="320" y="140" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="es">y con qué criterio exacto</text>
+        <text x="320" y="140" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="en">and by exactly what standard</text>
+        <text x="320" y="140" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="pt">e com que critério exato</text>
+
+        <rect x="448" y="40" width="180" height="120" rx="10" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <text x="538" y="72" text-anchor="middle" font-size="15" font-weight="650" fill="var(--fg)">3</text>
+        <text x="538" y="98" text-anchor="middle" font-size="14" font-weight="650" fill="var(--fg)" data-l="es">Evidencia</text>
+        <text x="538" y="98" text-anchor="middle" font-size="14" font-weight="650" fill="var(--fg)" data-l="en">Evidence</text>
+        <text x="538" y="98" text-anchor="middle" font-size="14" font-weight="650" fill="var(--fg)" data-l="pt">Evidência</text>
+        <text x="538" y="122" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="es">qué pasó de verdad,</text>
+        <text x="538" y="122" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="en">what actually happened,</text>
+        <text x="538" y="122" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="pt">o que aconteceu de verdade,</text>
+        <text x="538" y="140" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="es">día por día</text>
+        <text x="538" y="140" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="en">day by day</text>
+        <text x="538" y="140" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="pt">dia após dia</text>
+
+        <path d="M448 100 L 415 100" stroke="var(--muted)" stroke-width="1.5" stroke-dasharray="5 4" fill="none"/>
+        <line x1="437" y1="88" x2="425" y2="112" stroke="var(--warn)" stroke-width="2.5"/>
+        <line x1="425" y1="88" x2="437" y2="112" stroke="var(--warn)" stroke-width="2.5"/>
+        <text x="320" y="200" text-anchor="middle" font-size="12" fill="var(--warn)" data-l="es">lo que pasó NO se convierte solo en “aprendido”</text>
+        <text x="320" y="200" text-anchor="middle" font-size="12" fill="var(--warn)" data-l="en">what happened does NOT turn itself into “learned”</text>
+        <text x="320" y="200" text-anchor="middle" font-size="12" fill="var(--warn)" data-l="pt">o que aconteceu NÃO vira sozinho “aprendido”</text>
+        <text x="320" y="222" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="es">esa decisión siempre la tomás vos</text>
+        <text x="320" y="222" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="en">that decision is always yours</text>
+        <text x="320" y="222" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="pt">essa decisão é sempre sua</text>
+      </g>
+    </svg>
+    <figcaption data-l="es">Practicar mucho no asciende solo a “dominado”. Nada cruza esa línea sin que una persona lo decida.</figcaption>
+    <figcaption data-l="en">Lots of practice doesn't promote itself to “mastered”. Nothing crosses that line unless a person decides it.</figcaption>
+    <figcaption data-l="pt">Praticar muito não se promove sozinho a “dominado”. Nada cruza essa linha sem que uma pessoa decida.</figcaption>
+  </figure>
+
+  <h2 data-l="es">Un ejemplo concreto</h2>
+  <h2 data-l="en">A concrete example</h2>
+  <h2 data-l="pt">Um exemplo concreto</h2>
+
+  <p data-l="es">Supongamos que querés aprender a cortar verdura con cuchillo. “Cortar bien” no sirve como criterio: es una frase que se acomoda al resultado. Esto sí sirve:</p>
+  <p data-l="en">Say you want to learn knife work. “Cut well” is useless as a standard: it's a phrase that bends to fit the result. This works:</p>
+  <p data-l="pt">Digamos que você quer aprender a cortar legumes com faca. “Cortar bem” não serve como critério: é uma frase que se ajusta ao resultado. Isto serve:</p>
+
+  <div class="card">
+    <p style="margin:0" data-l="es"><strong>Criterio:</strong> 20 rodajas de zanahoria de 3 mm, con margen de 1 mm, medidas con regla. Máximo 2 desparejas.</p>
+    <p style="margin:0" data-l="en"><strong>Standard:</strong> 20 carrot slices of 3 mm, ±1 mm, measured with a ruler. At most 2 off.</p>
+    <p style="margin:0" data-l="pt"><strong>Critério:</strong> 20 rodelas de cenoura de 3 mm, com margem de 1 mm, medidas com régua. No máximo 2 irregulares.</p>
+  </div>
+
+  <p data-l="es">Ese criterio se escribe <strong>antes</strong> de la primera práctica y queda congelado. Si dentro de un mes lográs 14 de 20, el sistema no te deja bajar el número a 12 y llamarlo éxito: guarda el criterio original y te muestra los dos. Podés cambiarlo igual —es tu cuaderno— pero el cambio queda a la vista, y esa es toda la diferencia.</p>
+  <p data-l="en">You write that standard <strong>before</strong> the first session, and it's frozen. If a month later you hit 14 out of 20, the system won't let you lower it to 12 and call it a win: it keeps the original and shows you both. You can still change it — it's your notebook — but the change is visible, and that's the whole difference.</p>
+  <p data-l="pt">Esse critério se escreve <strong>antes</strong> da primeira prática e fica congelado. Se daqui a um mês você conseguir 14 de 20, o sistema não deixa baixar para 12 e chamar de sucesso: guarda o critério original e mostra os dois. Você pode mudá-lo assim mesmo — é o seu caderno — mas a mudança fica à vista, e essa é toda a diferença.</p>
+
+  <h2 data-l="es">Nada queda aprendido para siempre</h2>
+  <h2 data-l="en">Nothing stays learned forever</h2>
+  <h2 data-l="pt">Nada fica aprendido para sempre</h2>
+
+  <figure>
+    <svg viewBox="0 0 640 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ciclo de vida">
+      <g font-family="-apple-system,Segoe UI,Roboto,sans-serif" font-size="12.5">
+        <rect x="8" y="52" width="120" height="44" rx="8" fill="var(--card)" stroke="var(--line)"/>
+        <text x="68" y="79" text-anchor="middle" fill="var(--muted)" data-l="es">borrador</text>
+        <text x="68" y="79" text-anchor="middle" fill="var(--muted)" data-l="en">draft</text>
+        <text x="68" y="79" text-anchor="middle" fill="var(--muted)" data-l="pt">rascunho</text>
+
+        <rect x="176" y="52" width="128" height="44" rx="8" fill="var(--card)" stroke="var(--line)"/>
+        <text x="240" y="79" text-anchor="middle" fill="var(--fg)" data-l="es">practicando</text>
+        <text x="240" y="79" text-anchor="middle" fill="var(--fg)" data-l="en">practising</text>
+        <text x="240" y="79" text-anchor="middle" fill="var(--fg)" data-l="pt">praticando</text>
+
+        <rect x="352" y="52" width="128" height="44" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/>
+        <text x="416" y="79" text-anchor="middle" font-weight="650" fill="var(--fg)" data-l="es">verificado</text>
+        <text x="416" y="79" text-anchor="middle" font-weight="650" fill="var(--fg)" data-l="en">verified</text>
+        <text x="416" y="79" text-anchor="middle" font-weight="650" fill="var(--fg)" data-l="pt">verificado</text>
+
+        <rect x="516" y="52" width="116" height="44" rx="8" fill="var(--card)" stroke="var(--warn)"/>
+        <text x="574" y="73" text-anchor="middle" fill="var(--warn)" data-l="es">a revisar</text>
+        <text x="574" y="73" text-anchor="middle" fill="var(--warn)" data-l="en">needs review</text>
+        <text x="574" y="73" text-anchor="middle" fill="var(--warn)" data-l="pt">a revisar</text>
+        <text x="574" y="89" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="es">pasó el tiempo</text>
+        <text x="574" y="89" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="en">time passed</text>
+        <text x="574" y="89" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="pt">passou o tempo</text>
+
+        <path d="M128 74 L 172 74" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#a)"/>
+        <path d="M304 74 L 348 74" stroke="var(--muted)" stroke-width="1.5" marker-end="url(#a)"/>
+        <path d="M480 74 L 512 74" stroke="var(--warn)" stroke-width="1.5" marker-end="url(#w)"/>
+        <path d="M574 100 C 574 140, 240 140, 240 100" stroke="var(--muted)" stroke-width="1.5" fill="none" stroke-dasharray="5 4" marker-end="url(#a)"/>
+        <text x="408" y="158" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="es">volver a practicar y comprobar de nuevo</text>
+        <text x="408" y="158" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="en">practise again and re-check</text>
+        <text x="408" y="158" text-anchor="middle" font-size="11.5" fill="var(--muted)" data-l="pt">praticar de novo e comprovar outra vez</text>
+
+        <text x="416" y="34" text-anchor="middle" font-size="11.5" fill="var(--accent)" data-l="es">solo si una persona lo ratifica</text>
+        <text x="416" y="34" text-anchor="middle" font-size="11.5" fill="var(--accent)" data-l="en">only if a person signs off</text>
+        <text x="416" y="34" text-anchor="middle" font-size="11.5" fill="var(--accent)" data-l="pt">só se uma pessoa ratificar</text>
+      </g>
+      <defs>
+        <marker id="a" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0 0 L8 4 L0 8 z" fill="var(--muted)"/>
+        </marker>
+        <marker id="w" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+          <path d="M0 0 L8 4 L0 8 z" fill="var(--warn)"/>
+        </marker>
+      </defs>
+    </svg>
+    <figcaption data-l="es">Al marcar algo como verificado anotás también por cuánto tiempo lo das por válido. Cuando ese plazo vence sin práctica nueva, vuelve a “a revisar”.</figcaption>
+    <figcaption data-l="en">When you mark something verified you also record how long you consider it valid. When that runs out with no new practice, it goes back to “needs review”.</figcaption>
+    <figcaption data-l="pt">Ao marcar algo como verificado, você também anota por quanto tempo o considera válido. Quando esse prazo vence sem prática nova, volta para “a revisar”.</figcaption>
+  </figure>
+
+  <h2 data-l="es">Lo que el sistema se niega a hacer</h2>
+  <h2 data-l="en">What the system refuses to do</h2>
+  <h2 data-l="pt">O que o sistema se recusa a fazer</h2>
+
+  <p data-l="es">Una inteligencia artificial puede escuchar tu grabación y opinar. Esa opinión se guarda como lo que es —una lectura, con su margen de error— y <strong>nunca</strong> alcanza para marcar algo como aprendido. Para eso hace falta que una persona lo ratifique y quede anotado quién fue.</p>
+  <p data-l="en">An AI can listen to your recording and give an opinion. That opinion is stored as what it is — a reading, with its margin of error — and it is <strong>never</strong> enough to mark something as learned. That requires a person to sign off, and it records who did.</p>
+  <p data-l="pt">Uma inteligência artificial pode ouvir sua gravação e opinar. Essa opinião é guardada como o que é — uma leitura, com sua margem de erro — e <strong>nunca</strong> basta para marcar algo como aprendido. Para isso é preciso que uma pessoa ratifique, e fica registrado quem foi.</p>
+
+  <div class="card flag">
+    <p style="margin:0" data-l="es">La regla es incómoda a propósito: si una máquina pudiera certificar que aprendiste, el cuaderno se volvería un espejo que te dice lo que querés oír. El sistema prefiere decir <em>“no pude comprobarlo”</em> antes que dar un visto bueno vacío.</p>
+    <p style="margin:0" data-l="en">The rule is deliberately inconvenient: if a machine could certify your learning, the notebook would become a mirror telling you what you want to hear. The system would rather say <em>“I couldn't verify this”</em> than hand out an empty tick.</p>
+    <p style="margin:0" data-l="pt">A regra é desconfortável de propósito: se uma máquina pudesse certificar que você aprendeu, o caderno viraria um espelho dizendo o que você quer ouvir. O sistema prefere dizer <em>“não consegui comprovar”</em> a dar um aval vazio.</p>
+  </div>
+
+  <h2 data-l="es">Un GPS, no un vigilante</h2>
+  <h2 data-l="en">A GPS, not a warden</h2>
+  <h2 data-l="pt">Um GPS, não um vigia</h2>
+
+  <p data-l="es">Este sistema no busca que estudies. Supone que ya decidiste qué querés aprender y por qué, y que no necesitás que un programa te empuje. Tampoco juzga <strong>qué</strong> elegiste: trata igual a quien prepara una certificación profesional y a quien quiere aprender a hacer nudos.</p>
+  <p data-l="en">This system isn't trying to make you study. It assumes you already decided what you want to learn and why, and that you don't need software nudging you. Nor does it judge <strong>what</strong> you chose: it treats someone preparing a professional certification exactly like someone learning to tie knots.</p>
+  <p data-l="pt">Este sistema não quer fazer você estudar. Supõe que você já decidiu o que quer aprender e por quê, e que não precisa de um programa te empurrando. Também não julga <strong>o que</strong> você escolheu: trata igual quem prepara uma certificação profissional e quem quer aprender a dar nós.</p>
+
+  <p data-l="es">No hay rachas que defender, ni insignias, ni nada que te reclame por no haber practicado. Cuando la ventana de un compromiso avanza sin evidencia nueva, te lo dice como te lo diría un GPS: no para retarte, sino porque preferís saber dónde estás.</p>
+  <p data-l="en">There are no streaks to defend, no badges, nothing that scolds you for not practising. When a commitment's window advances with no new evidence, it tells you the way a GPS would: not to tell you off, but because you'd rather know where you are.</p>
+  <p data-l="pt">Não há sequências para defender, nem medalhas, nem nada que te cobre por não ter praticado. Quando a janela de um compromisso avança sem evidência nova, ele avisa como avisaria um GPS: não para te repreender, mas porque você prefere saber onde está.</p>
+
+  <p data-l="es">Ni siquiera hace falta que te pongas una fecha. Podés registrar tu práctica como un <strong>seguimiento abierto</strong>, sin plazo que venza: se mide contra tu criterio y se acumula la evidencia, y listo. La fecha sirve cuando querés comparar un antes y un después — no es un requisito para usar esto.</p>
+  <p data-l="en">You don't even need to set a date. You can track your practice as an <strong>open-ended log</strong>, with no deadline to expire: it measures against your standard and accumulates the evidence, and that's it. A date is useful when you want to compare a before and an after — it isn't a requirement for using this.</p>
+  <p data-l="pt">Nem é preciso marcar uma data. Você pode registrar sua prática como um <strong>acompanhamento aberto</strong>, sem prazo que vença: mede-se contra o seu critério e acumula-se a evidência, e pronto. A data serve quando você quer comparar um antes e um depois — não é requisito para usar isto.</p>
+
+  <div class="card">
+    <p style="margin:0 0 .6rem" data-l="es">Y no te impide hacer trampa, porque no hay contra quién hacerla. Podés registrar sesiones que no ocurrieron, o aflojar el criterio hasta que cualquier resultado lo cumpla. Nadie va a auditarte. Lo único que se rompe es tu propio instrumento de medición.</p>
+    <p style="margin:0 0 .6rem" data-l="en">And it doesn't stop you from cheating, because there's nobody to cheat. You can log sessions that never happened, or loosen the standard until any result clears it. No one is going to audit you. The only thing that breaks is your own measuring instrument.</p>
+    <p style="margin:0 0 .6rem" data-l="pt">E não impede que você trapaceie, porque não há contra quem. Você pode registrar sessões que não aconteceram, ou afrouxar o critério até que qualquer resultado o cumpra. Ninguém vai te auditar. A única coisa que se quebra é o seu próprio instrumento de medição.</p>
+    <p style="margin:0" data-l="es">Por eso el objetivo nunca fue que el sistema <em>crea</em> que aprendiste. Un registro con todo en verde no vale nada por sí mismo. <strong>Lo que vale es que puedas hacer aquello para lo que practicaste</strong> — y para eso conviene que el registro diga la verdad, no que apruebe.</p>
+    <p style="margin:0" data-l="en">That's why the goal was never for the system to <em>believe</em> you learned. A record showing all green is worth nothing by itself. <strong>What's worth something is being able to do the thing you practised for</strong> — and for that, you want the record to be truthful, not flattering.</p>
+    <p style="margin:0" data-l="pt">Por isso o objetivo nunca foi que o sistema <em>acredite</em> que você aprendeu. Um registro todo verde não vale nada por si só. <strong>O que vale é você conseguir fazer aquilo para o que praticou</strong> — e para isso convém que o registro diga a verdade, não que aprove.</p>
+  </div>
+
+  <p class="muted" data-l="es">Esto explica la forma de las verificaciones. El congelado del criterio no está para atarte las manos: podés cambiarlo cuando quieras, y el sistema solo hace que ese cambio quede a la vista en vez de pasar inadvertido. La diferencia no es entre poder y no poder, sino entre saber y no saber.</p>
+  <p class="muted" data-l="en">This explains the shape of the checks. Freezing the standard isn't there to tie your hands: you can change it whenever you like, and the system merely makes that change visible instead of letting it slip by. The difference isn't between being able and not being able — it's between knowing and not knowing.</p>
+  <p class="muted" data-l="pt">Isso explica o formato das verificações. Congelar o critério não existe para amarrar suas mãos: você pode mudá-lo quando quiser, e o sistema apenas faz com que essa mudança fique à vista em vez de passar despercebida. A diferença não é entre poder e não poder, mas entre saber e não saber.</p>
+
+  <h2 data-l="es">Cómo se usa</h2>
+  <h2 data-l="en">How you use it</h2>
+  <h2 data-l="pt">Como se usa</h2>
+
+  <div class="card flag">
+    <p style="margin:0 0 .5rem" data-l="es"><strong>Antes que nada, con honestidad:</strong> hoy esto se maneja escribiendo archivos de texto y ejecutando comandos en una terminal. Necesitás tener instalado Python y Git, y algo de comodidad con la consola. No hay todavía una aplicación con botones.</p>
+    <p style="margin:0 0 .5rem" data-l="en"><strong>Honestly, up front:</strong> today you run this by editing text files and typing commands in a terminal. You need Python and Git installed, and some comfort with a console. There is no point-and-click app yet.</p>
+    <p style="margin:0 0 .5rem" data-l="pt"><strong>Antes de tudo, com honestidade:</strong> hoje isto se usa escrevendo arquivos de texto e executando comandos num terminal. Você precisa ter Python e Git instalados, e alguma familiaridade com o console. Ainda não existe um aplicativo com botões.</p>
+    <p style="margin:0" class="muted" data-l="es">La idea de arriba, en cambio, sirve igual aunque uses un cuaderno de papel.</p>
+    <p style="margin:0" class="muted" data-l="en">The idea above, though, works just as well on paper.</p>
+    <p style="margin:0" class="muted" data-l="pt">A ideia acima, no entanto, funciona igual num caderno de papel.</p>
+  </div>
+
+  <ol class="steps">
+    <li data-l="es">Descargás el proyecto y creás tu habilidad: un comando arma las carpetas.</li>
+    <li data-l="es">Explorás el tema con calma y recién después escribís en qué partes se divide.</li>
+    <li data-l="es">Escribís tu criterio con números, y el mismo criterio para la primera práctica.</li>
+    <li data-l="es">Anotás cada sesión en una línea del registro.</li>
+    <li data-l="es">Cuando arranca el compromiso, congelás el criterio para que no se pueda mover en silencio.</li>
+    <li data-l="es">Los comandos te dicen si algo no cierra: referencias rotas, plazos vencidos, criterios que cambiaron.</li>
+
+    <li data-l="en">Download the project and create your skill: one command sets up the folders.</li>
+    <li data-l="en">Explore the topic unhurriedly, and only then write down its parts.</li>
+    <li data-l="en">Write your standard with numbers, and the same standard for the first session.</li>
+    <li data-l="en">Record each session as one line in the log.</li>
+    <li data-l="en">When the commitment starts, freeze the standard so it can't move quietly.</li>
+    <li data-l="en">The commands tell you when something doesn't add up: broken references, expired deadlines, changed standards.</li>
+
+    <li data-l="pt">Você baixa o projeto e cria sua habilidade: um comando monta as pastas.</li>
+    <li data-l="pt">Explora o tema com calma e só depois escreve em que partes se divide.</li>
+    <li data-l="pt">Escreve seu critério com números, e o mesmo critério para a primeira prática.</li>
+    <li data-l="pt">Anota cada sessão em uma linha do registro.</li>
+    <li data-l="pt">Quando o compromisso começa, congela o critério para que não possa mudar em silêncio.</li>
+    <li data-l="pt">Os comandos avisam quando algo não fecha: referências quebradas, prazos vencidos, critérios alterados.</li>
+  </ol>
+
+  <p data-l="es">Así se ve un informe real, a mitad de camino:</p>
+  <p data-l="en">Here's what a real report looks like, midway:</p>
+  <p data-l="pt">É assim que se parece um relatório real, no meio do caminho:</p>
+
+<pre><code data-l="es">compromiso 'cocina-2026-08' (habilidad: cocina)
+  ventana: 2026-07-28 -> 2026-08-27 (30 días)
+  transcurridos: 12 días | restantes: 18 días
+  evidencia desde el inicio: 5 sesión(es)
+  última sesión: 2026-08-07 (hace 2 días)</code><code data-l="en">commitment 'cooking-2026-08' (skill: cooking)
+  window: 2026-07-28 -> 2026-08-27 (30 days)
+  elapsed: 12 days | remaining: 18 days
+  evidence since baseline: 5 session(s)
+  last session: 2026-08-07 (2 days ago)</code><code data-l="pt">compromisso 'cozinha-2026-08' (habilidade: cozinha)
+  janela: 2026-07-28 -> 2026-08-27 (30 dias)
+  decorridos: 12 dias | restantes: 18 dias
+  evidência desde o início: 5 sessão(ões)
+  última sessão: 2026-08-07 (há 2 dias)</code></pre>
+
+  <p data-l="es">Fijate que no dice si vas bien o mal. Cuenta y resta fechas; el juicio es tuyo. Esa frontera es deliberada y recorre todo el sistema.</p>
+  <p data-l="en">Notice it doesn't say whether you're doing well. It counts and subtracts dates; the judgement is yours. That boundary is deliberate and runs through the whole system.</p>
+  <p data-l="pt">Repare que não diz se você vai bem ou mal. Conta e subtrai datas; o julgamento é seu. Essa fronteira é deliberada e atravessa todo o sistema.</p>
+
+  <h2 data-l="es">Para qué sirve y para qué no</h2>
+  <h2 data-l="en">What it's for, and what it isn't</h2>
+  <h2 data-l="pt">Para que serve e para que não</h2>
+
+  <ul>
+    <li data-l="es"><strong>Sirve</strong> para habilidades con un resultado observable: un instrumento, un deporte, cocinar, escribir, hablar en público, una herramienta de trabajo.</li>
+    <li data-l="es"><strong>No reemplaza a un profesor</strong>, sobre todo si hay riesgo físico. Mide si alcanzás para lo que te propusiste, no maestría.</li>
+    <li data-l="es"><strong>No te motiva.</strong> No hay rachas para presumir ni insignias. Solo un registro honesto.</li>
+
+    <li data-l="en"><strong>Good for</strong> skills with an observable result: an instrument, a sport, cooking, writing, public speaking, a work tool.</li>
+    <li data-l="en"><strong>Not a replacement for a teacher</strong>, especially where there's physical risk. It measures whether you reach what you set out to do, not mastery.</li>
+    <li data-l="en"><strong>It won't motivate you.</strong> No streaks to show off, no badges. Just an honest record.</li>
+
+    <li data-l="pt"><strong>Serve</strong> para habilidades com resultado observável: um instrumento, um esporte, cozinhar, escrever, falar em público, uma ferramenta de trabalho.</li>
+    <li data-l="pt"><strong>Não substitui um professor</strong>, sobretudo se há risco físico. Mede se você alcança o que se propôs, não maestria.</li>
+    <li data-l="pt"><strong>Não te motiva.</strong> Não há sequências para exibir nem medalhas. Só um registro honesto.</li>
+  </ul>
+
+  <h2 data-l="es">Empezar</h2>
+  <h2 data-l="en">Get started</h2>
+  <h2 data-l="pt">Começar</h2>
+
+  <p data-l="es">El repositorio incluye una guía paso a paso llamada <strong>“De cero a verde”</strong>: el orden exacto de las operaciones, que es lo único que las plantillas no pueden explicarte.</p>
+  <p data-l="en">The repository includes a step-by-step guide called <strong>“From zero to green”</strong>: the exact order of operations, which is the one thing templates can't teach you.</p>
+  <p data-l="pt">O repositório inclui um guia passo a passo chamado <strong>“Do zero ao verde”</strong>: a ordem exata das operações, que é a única coisa que os modelos não conseguem explicar.</p>
+
+  <p>
+    <a href="https://github.com/MauricioPerera/kdd-learning-template" data-l="es">Ver el proyecto en GitHub →</a>
+    <a href="https://github.com/MauricioPerera/kdd-learning-template" data-l="en">See the project on GitHub →</a>
+    <a href="https://github.com/MauricioPerera/kdd-learning-template" data-l="pt">Ver o projeto no GitHub →</a>
+  </p>
+
+  <footer>
+    <p data-l="es">KDD-Learning es una adaptación de <a href="https://github.com/MauricioPerera/KDD">KDD (Knowledge-Driven Development)</a> al aprendizaje de habilidades. Sin dependencias: solo Python y Git.</p>
+    <p data-l="en">KDD-Learning adapts <a href="https://github.com/MauricioPerera/KDD">KDD (Knowledge-Driven Development)</a> to skill acquisition. No dependencies: just Python and Git.</p>
+    <p data-l="pt">KDD-Learning é uma adaptação de <a href="https://github.com/MauricioPerera/KDD">KDD (Knowledge-Driven Development)</a> à aquisição de habilidades. Sem dependências: apenas Python e Git.</p>
+  </footer>
+
+</main>
+
+<script>
+(function(){
+  var root = document.documentElement;
+  var langs = document.querySelector('.langs');
+  var buttons = Array.prototype.slice.call(langs.querySelectorAll('button'));
+
+  function movePill(btn){
+    // La pastilla se posiciona midiendo el boton activo: sobrevive a cambios
+    // de idioma, de tipografia y de ancho sin numeros magicos en el CSS.
+    langs.style.setProperty('--pill-w', btn.offsetWidth + 'px');
+    langs.style.setProperty('--pill-x', btn.offsetLeft + 'px');
+  }
+
+  function apply(lang){
+    root.setAttribute('lang', lang);
+    buttons.forEach(function(b){
+      var on = b.dataset.set === lang;
+      b.setAttribute('aria-pressed', String(on));
+      if (on) movePill(b);
+    });
+    try{ localStorage.setItem('kdd-lang', lang); }catch(e){}
+  }
+
+  function set(lang){
+    if (root.getAttribute('lang') === lang) return;
+    var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (document.startViewTransition && !reduce){
+      document.startViewTransition(function(){ apply(lang); });
+    } else {
+      apply(lang);
+    }
+  }
+
+  buttons.forEach(function(b){
+    b.addEventListener('click', function(){ set(b.dataset.set); });
+  });
+
+  var saved;
+  try{ saved = localStorage.getItem('kdd-lang'); }catch(e){}
+  if(!saved){
+    var nav = (navigator.language || 'es').slice(0,2).toLowerCase();
+    saved = (nav === 'en' || nav === 'pt') ? nav : 'es';
+  }
+  apply(saved);
+  addEventListener('resize', function(){
+    var on = langs.querySelector('button[aria-pressed="true"]');
+    if (on) movePill(on);
+  });
+
+  var header = document.querySelector('header');
+  var onScroll = function(){ header.classList.toggle('scrolled', scrollY > 8); };
+  addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+})();
+</script>
+
+</body>
+</html>
